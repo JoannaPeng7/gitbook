@@ -1,10 +1,8 @@
----
-description: 啊啊
----
+# 20211127工作总结
 
-# 序
+##
 
-① SCAAML
+## ① SCAAML
 
 > 原文：[Hacker's guide to deep-learning side-channel attacks: code walkthrough](https://elie.net/blog/security/hacker-guide-to-deep-learning-side-channel-attacks-code-walkthrough/)
 >
@@ -14,7 +12,7 @@ description: 啊啊
 
 ResNet网络是在2015年由微软实验室提出，斩获当年ImageNet竞赛中分类任务第一名，目标检测第一名。获得COCO数据集中目标检测第一名，图像分割第一名。下图是ResNet34层模型的结构简图：
 
-![img](https://img-blog.csdnimg.cn/20200307105322237.jpg?x-oss-process=image/watermark,type\_ZmFuZ3poZW5naGVpdGk,shadow\_10,text\_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3NTQxMDk3,size\_16,color\_FFFFFF,t\_70)
+![](https://img-blog.csdnimg.cn/20200307105322237.jpg?x-oss-process=image/watermark,type\_ZmFuZ3poZW5naGVpdGk,shadow\_10,text\_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3NTQxMDk3,size\_16,color\_FFFFFF,t\_70)
 
 在ResNet网络中有如下几个**亮点**：
 
@@ -23,11 +21,13 @@ ResNet网络是在2015年由微软实验室提出，斩获当年ImageNet竞赛�
 
 在ResNet网络提出之前，传统的卷积神经网络都是通过将一系列卷积层与下采样层进行堆叠得到的。但是当堆叠到一定网络深度时，就会出现两个问题。1）梯度消失或梯度爆炸。 2）退化问题(degradation problem)。
 
-在ResNet论文中说通过数据的预处理以及在网络中**使用BN（Batch Normalization）层能够解决梯度消失或者梯度爆炸问题**。如果不了解BN层可参考这个[**链接**](https://blog.csdn.net/qq\_37541097/article/details/104434557)。但是对于退化问题（随着网络层数的加深，效果还会变差，如下图所示）并没有很好的解决办法。 ![image-20211130112145784](https://raw.githubusercontent.com/JoannaPeng7/work-summary/master/img/202111301121773.png?token=ALDIGLCWW627Q6SAL5BZCGDBUWMQQ)
+在ResNet论文中说通过数据的预处理以及在网络中**使用BN（Batch Normalization）层能够解决梯度消失或者梯度爆炸问题**。如果不了解BN层可参考这个[**链接**](https://blog.csdn.net/qq\_37541097/article/details/104434557)。但是对于退化问题（随着网络层数的加深，效果还会变差，如下图所示）并没有很好的解决办法。&#x20;
+
+![](<../.gitbook/assets/image (7).png>)
 
 所以ResNet论文提出了**residual结构（残差结构）来减轻退化问题**。下图是使用residual结构的卷积网络，可以看到随着网络的不断加深，效果并没有变差，反而变的更好了。
 
-![image-20211130112157079](https://raw.githubusercontent.com/JoannaPeng7/work-summary/master/img/202111301121179.png?token=ALDIGLFNBJNT7LLDBVZ5T5LBUWMRG)
+
 
 **论文中的残差结构（residual）**
 
@@ -35,29 +35,33 @@ ResNet网络是在2015年由微软实验室提出，斩获当年ImageNet竞赛�
 
 > 这里左侧的图原文中是64-d，为了方便对比两种残差结构的参数量，将输入的维度改为和右侧一致的256-d
 
-![image-20211130112210396](https://raw.githubusercontent.com/JoannaPeng7/work-summary/master/img/202111301122330.png?token=ALDIGLDIUKKJYLSSOPK26FLBUWMSA)
+![](<../.gitbook/assets/image (4).png>)
 
 先对左侧的残差结构（针对ResNet18/34）进行一个分析。如下图所示，该残差结构的主分支是由两层3x3的卷积层组成，而残差结构右侧的连接线是shortcut分支也称捷径分支（注意为了让主分支上的输出矩阵能够与我们捷径分支上的输出矩阵进行相加，必须保证这两个输出特征矩阵有相同的shape）。
 
-**右侧的虚线分支：输入shape和输出shape不同，因此虚线部分有一个filter**
+<mark style="color:blue;">**右侧的虚线分支：输入shape和输出shape不同，因此虚线部分有一个filter**</mark>
 
 > 分支1： padding=1，将input size的长宽降为1/2，深度增加
 >
 > 分支2： padding=0
 
-![image-20211130112224724](https://raw.githubusercontent.com/JoannaPeng7/work-summary/master/img/202111301122482.png?token=ALDIGLBRG7WBJVZZXGWOFSDBUWMS6)
+![](<../.gitbook/assets/image (6).png>)
 
-**为什么这个分支结构是虚线？**
+****
+
+<mark style="background-color:blue;"><mark style="background-color:red;">**为什么这个分支结构是虚线？**<mark style="background-color:red;"></mark>
 
 如下图（上）所示，对于resnet-34层结构来说，max pooling层之后的输出是56x56x64，而conv2\_x期望的输入就是56x56x64，所以如下图（下）所示，conv2\_x的第一个块的分支是实线结构。对于conv\_3x来说，上一层的输出是56x56x64，它期望的输入是56x56x128，因此分支的shortcut为虚线（有一个filter），来改变输入特征矩阵的shape，使得输入的shape和主分支的输出shape相同，这样才能进行相加。
 
-简单来说就是虚线分支是用来改变输入特征矩阵的shape，使其与主分支的特征矩阵相同，从而进行相加
+_<mark style="color:blue;">简单来说就是虚线分支是用来改变输入特征矩阵的shape，使其与主分支的特征矩阵相同，从而进行相加</mark>_
 
-![image-20211130112239221](https://raw.githubusercontent.com/JoannaPeng7/work-summary/master/img/202111301122660.png?token=ALDIGLAZM4QBZH5UYG2IFXTBUWMT4)
+![](../.gitbook/assets/image.png)
 
-![img](https://img-blog.csdnimg.cn/20200307105322237.jpg?x-oss-process=image/watermark,type\_ZmFuZ3poZW5naGVpdGk,shadow\_10,text\_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3NTQxMDk3,size\_16,color\_FFFFFF,t\_70)
+![](https://img-blog.csdnimg.cn/20200307105322237.jpg?x-oss-process=image/watermark,type\_ZmFuZ3poZW5naGVpdGk,shadow\_10,text\_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3NTQxMDk3,size\_16,color\_FFFFFF,t\_70)
 
 ***
+
+****
 
 ### SCAAML
 
@@ -79,7 +83,7 @@ _Collecting power traces_ 之后的部分
 
 #### 文件结构
 
-![image-20211130112256506](https://raw.githubusercontent.com/JoannaPeng7/work-summary/master/img/202111301122423.png?token=ALDIGLBIKTIJNE2IRKMHCYDBUWMU4)
+![](<../.gitbook/assets/image (3).png>)
 
 *   scaaml/
 
@@ -101,15 +105,66 @@ _Collecting power traces_ 之后的部分
 
 #### 训练模型
 
-***
-
 **配置文件`config/stm32f415_tinyaes.json`**
 
 ```
- {     "model": "cnn",     "device": "stm32f415",     "algorithm": "tinyaes",     "version": "10",        //攻击点有3个，AES-128的密钥有16byte，所以一共有3x16=48个模型要训练     "attack_points": [         "sub_bytes_out",         "sub_bytes_in",         "key"     ],     "attack_bytes": [         "0",         "1",         "2",         "3",         "4",         "5",         "6",         "7",         "8",         "9",         "10",         "11",         "12",         "13",         "14",         "15"     ],     "max_trace_len": 20000,     //num_shards & num_traces_per_shard 定义了加载多少数据     "num_shards": 256,  //1个shard包含一个给定key的所有example，所以shard的数量等于使用的key的数量     "num_traces_per_shard": 256,  //对于一个给定的key要使用的不同的能量迹/明文样本数     "batch_size": 32,     "epochs": 30,     "optimizer_parameters": {         "lr": 0.001,         "multi_gpu_lr": 0.001     },     "model_parameters": {         "activation": "relu",         "initial_filters": 8,         "initial_pool_size": 4,         "block_kernel_size": 3,         "blocks_stack1": 3,         "blocks_stack2": 4,         "blocks_stack3": 4,         "blocks_stack4": 3,         "dense_dropout": 0.1     } }
+{
+    "model": "cnn",
+    "device": "stm32f415",
+    "algorithm": "tinyaes",
+    "version": "10",
+  
+    //攻击点有3个，AES-128的密钥有16byte，所以一共有3x16=48个模型要训练
+    "attack_points": [
+        "sub_bytes_out",
+        "sub_bytes_in",
+        "key"
+    ],
+    "attack_bytes": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15"
+    ],
+    "max_trace_len": 20000,
+  	//num_shards & num_traces_per_shard 定义了加载多少数据
+    "num_shards": 256,	//1个shard包含一个给定key的所有example，所以shard的数量等于使用的key的数量
+    "num_traces_per_shard": 256,	//对于一个给定的key要使用的不同的能量迹/明文样本数
+    "batch_size": 32,
+    "epochs": 30,
+    "optimizer_parameters": {
+        "lr": 0.001,
+        "multi_gpu_lr": 0.001
+    },
+    "model_parameters": {
+        "activation": "relu",
+        "initial_filters": 8,
+        "initial_pool_size": 4,
+        "block_kernel_size": 3,
+        "blocks_stack1": 3,
+        "blocks_stack2": 4,
+        "blocks_stack3": 4,
+        "blocks_stack4": 3,
+        "dense_dropout": 0.1
+    }
+}
 ```
 
-**模型架构**
+
+
+#### **模型架构**
 
 **一般结构**
 
@@ -163,13 +218,13 @@ jupyter-notebook：[https://github.com/google/scaaml/blob/master/scaaml\_intro/k
         > 这一步不禁用也可以
     5. 重启设备
 
-    ![image-20211124092540637](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211124092540637.png?lastModify=1638253347)
+    ![image-20211124092540637](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211124092540637.png?lastModify=1638254063)
 
 ### 安装显卡驱动
 
 从NVIDIA官网下载相应驱动 [https://www.nvidia.com/Download/index.aspx?lang=en-us](https://www.nvidia.com/Download/index.aspx?lang=en-us)
 
-![image-20211127223158610](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127223158610.png?lastModify=1638253347)
+![image-20211127223158610](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127223158610.png?lastModify=1638254063)
 
 看一下ubuntu架构（32bit还是64bit）
 
@@ -223,7 +278,7 @@ jupyter-notebook：[https://github.com/google/scaaml/blob/master/scaaml\_intro/k
 
     安装完成后重启，使用`nvidia-smi`验证是否安装成功。
 
-    ![image-20211127224238505](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127224238505.png?lastModify=1638253347)
+    ![image-20211127224238505](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127224238505.png?lastModify=1638254063)
 
 ### 安装CUDA
 
@@ -231,21 +286,21 @@ jupyter-notebook：[https://github.com/google/scaaml/blob/master/scaaml\_intro/k
 
 下载cuda [https://developer.nvidia.com/cuda-toolkit-archive](https://developer.nvidia.com/cuda-toolkit-archive) 首先需要知道不同版本的cuda需要的gcc版本是不同的，cuda11.0与gcc的对应关系如下：
 
-![image-20211127224735921](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127224735921.png?lastModify=1638253347)
+![image-20211127224735921](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127224735921.png?lastModify=1638254063)
 
 找到自己需要的cuda版本如下选择，最下面框内会给出下载和命令：
 
 **tensorflow官网目前最高支持cuda11.2，官方给出的示例是11.0，这里也下载11.0**
 
-![image-20211127224552104](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127224552104.png?lastModify=1638253347)
+![image-20211127224552104](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127224552104.png?lastModify=1638254063)
 
-![image-20211127224809103](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127224809103.png?lastModify=1638253347)
+![image-20211127224809103](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127224809103.png?lastModify=1638254063)
 
 下图在Driver处敲回车，选择不安装驱动，因为之前已经安装过驱动程序，这里是因为每个cuda都会自带一套符合当前版本cuda最低要求的驱动程序，如果这里选择安装的驱动的话，在Windows上安装时会将之前安装的驱动覆盖，但是在linux上覆盖安装的话，可能会出现错误，具体没有试过。这里使用之前自己下载的驱动：
 
-![image-20211127224951264](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127224951264.png?lastModify=1638253347)
+![image-20211127224951264](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127224951264.png?lastModify=1638254063)
 
-![image-20211127225110355](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127225110355.png?lastModify=1638253347)
+![image-20211127225110355](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127225110355.png?lastModify=1638254063)
 
 如果显示如上图，则表示安装完成，但还不算安装成功，根据提示需要配置环境变量，进行如下操作：
 
@@ -318,7 +373,7 @@ jupyter-notebook：[https://github.com/google/scaaml/blob/master/scaaml\_intro/k
 
 随便跑一个代码试一下GPU能不能使用：
 
-![image-20211127230835233](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127230835233.png?lastModify=1638253347)
+![image-20211127230835233](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211127230835233.png?lastModify=1638254063)
 
 比之前CPU跑的速度快很多，配置成功。
 
@@ -336,47 +391,47 @@ jupyter-notebook：[https://github.com/google/scaaml/blob/master/scaaml\_intro/k
 
 ASCAD提供的：
 
-![image-20211122111720683](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122111720683.png?lastModify=1638253347)
+![image-20211122111720683](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122111720683.png?lastModify=1638254063)
 
 \*自己训练的：
 
-![image-20211122111033004](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122111033004.png?lastModify=1638253347)
+![image-20211122111033004](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122111033004.png?lastModify=1638254063)
 
 **ascadv2-multi-resnet-earlystopping.h5**
 
 ASCAD提供：
 
-![image-20211122142645195](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122142645195.png?lastModify=1638253347)
+![image-20211122142645195](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122142645195.png?lastModify=1638254063)
 
 #### MLP
 
 **mlp\_best\_ascad\_desync0\_node200\_layernb6\_epochs200\_classes256\_batchsize100.h5**
 
-![image-20211122165910584](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122165910584.png?lastModify=1638253347)
+![image-20211122165910584](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122165910584.png?lastModify=1638254063)
 
 **\*my\_mlp\_desync0\_epochs200\_batchsize100.h5**
 
-![image-20211122164225959](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122164225959.png?lastModify=1638253347)
+![image-20211122164225959](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122164225959.png?lastModify=1638254063)
 
 **\*my\_mlp\_desync0\_epochs400\_batchsize500.h5**
 
-![image-20211122193201656](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122193201656.png?lastModify=1638253347)
+![image-20211122193201656](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122193201656.png?lastModify=1638254063)
 
 **mlp\_best\_ascad\_desync50\_node200\_layernb6\_epochs200\_classes256\_batchsize100.h5**
 
-![image-20211123100803923](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211123100803923.png?lastModify=1638253347)
+![image-20211123100803923](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211123100803923.png?lastModify=1638254063)
 
 **\*my\_mlp\_desync50\_epochs400\_batchsize500.h5**
 
-![image-20211123100625519](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211123100625519.png?lastModify=1638253347)
+![image-20211123100625519](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211123100625519.png?lastModify=1638254063)
 
 **mlp\_best\_ascad\_desync100\_node200\_layernb6\_epochs200\_classes256\_batchsize100.h5**
 
-![image-20211122194553488](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122194553488.png?lastModify=1638253347)
+![image-20211122194553488](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211122194553488.png?lastModify=1638254063)
 
 **\*my\_mlp\_desync100\_epochs400\_batchsize500.h5**
 
-![image-20211123115857785](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211123115857785.png?lastModify=1638253347)
+![image-20211123115857785](file:///Users/joanna/Library/Application%20Support/typora-user-images/image-20211123115857785.png?lastModify=1638254063)
 
 ## 5. 模型训练（等采集能量迹）
 
@@ -408,4 +463,3 @@ R8424 G11：**￥22,798.00起**
 [http://www.chinasupercloud.com/serverdetails.html?id=2996](http://www.chinasupercloud.com/serverdetails.html?id=2996)
 
 \
-![](<.gitbook/assets/image (2).png>)
